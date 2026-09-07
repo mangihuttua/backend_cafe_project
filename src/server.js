@@ -22,15 +22,15 @@ pool.query("SELECT NOW()")
     console.error("Database connection gagal:", error);
   });
 
-// Menu Routes 
-app.use("/api/menu", menuRoutes);
-
-
+// Home route
 app.get("/", (req, res) => {
   res.json({
     message: "Cafe Delight API is running"
   });
 });
+
+// Menu Routes 
+app.use("/api/menu", menuRoutes);
 
 const PORT = process.env.PORT || 5000;
 

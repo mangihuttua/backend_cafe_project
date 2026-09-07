@@ -20,3 +20,4 @@ export const getMenus = async (req, res) => {
     });
   }
 };
+
