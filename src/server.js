@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import pool from "./config/database.js";
 import menuRoutes from "./routers/menuRoutes.js";
+import orderRoutes from "./routers/orderRoutes.js";
 
 dotenv.config();
 
@@ -10,6 +11,10 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Routes
+app.use("/api/menu", menuRoutes);
+app.use("/api/orders", orderRoutes);
 
 
 // test database connection
