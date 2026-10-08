@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import pool from "./config/database.js";
 import menuRoutes from "./routers/menuRoutes.js";
 import orderRoutes from "./routers/orderRoutes.js";
+import authRoutes from "./routers/authRoutes.js";
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 // Routes
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/auth", authRoutes);
 
 
 // test database connection
