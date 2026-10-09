@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import pool from "../config/database.js";
 
 export const register = async (req, res) => {
@@ -55,6 +56,83 @@ export const register = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Gagal melakukan registrasi",
+    });
+  }
+};
+
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // 1. Validasi input
+    if (!email?.trim() || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email dan password wajib diisi",
+      });
+    }
+
+    // 2. Cari pengguna berdasarkan email
+    const result = await pool.query(
+      `SELECT id, name, email, password, role
+       FROM users
+       WHERE email = $1`,
+      [email.trim().toLowerCase()]
+    );
+
+    const user = result.rows[0];
+
+    // 3. Cek apakah pengguna ditemukan
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Email atau password salah",
+      });
+    }
+
+    // 4. Bandingkan password dengan hash di database
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Email atau password salah",
+      });
+    }
+
+    // 5. Buat JWT
+    const token = jwt.sign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    // 6. Kirim respons tanpa password
+    return res.status(200).json({
+      success: true,
+      message: "Login berhasil",
+      token,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Gagal melakukan login",
     });
   }
 };
