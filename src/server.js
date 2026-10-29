@@ -36,9 +36,6 @@ app.get("/", (req, res) => {
   });
 });
 
-// Menu Routes 
-app.use("/api/menu", menuRoutes);
-
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
