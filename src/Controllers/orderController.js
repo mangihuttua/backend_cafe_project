@@ -146,3 +146,175 @@ export const createOrder = async (req, res) => {
     client.release();
   }
 };
+
+// GET ALL ORDERS
+export const getAllOrders = async (req, res) => {
+  try {
+    // Mengambil seluruh pesanan
+    const orderResult = await pool.query(
+      `SELECT *
+       FROM orders
+       ORDER BY created_at DESC`
+    );
+
+    const orders = orderResult.rows;
+
+    // Jika belum ada pesanan
+    if (orders.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Belum ada pesanan",
+        data: [],
+      });
+    }
+
+    // Mengambil detail item dari seluruh pesanan
+    const orderIds = orders.map((order) => order.id);
+
+    const itemResult = await pool.query(
+      `SELECT
+         oi.order_id,
+         oi.menu_id,
+         mi.title AS menu_name,
+         oi.quantity,
+         oi.price
+       FROM order_items oi
+       LEFT JOIN menu_items mi ON oi.menu_id = mi.id
+       WHERE oi.order_id = ANY($1::int[])
+       ORDER BY oi.id ASC`,
+      [orderIds]
+    );
+
+    // Menggabungkan pesanan dengan item masing-masing
+    const data = orders.map((order) => ({
+      ...order,
+      items: itemResult.rows.filter(
+        (item) => item.order_id === order.id
+      ),
+    }));
+
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error("Get all orders error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data pesanan",
+    });
+  }
+};
+
+// GET ORDER BY ID
+export const getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "ID pesanan tidak valid",
+      });
+    }
+
+    const orderResult = await pool.query(
+      `SELECT *
+       FROM orders
+       WHERE id = $1`,
+      [id]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Pesanan tidak ditemukan",
+      });
+    }
+
+    const itemResult = await pool.query(
+      `SELECT
+         oi.menu_id,
+         mi.title AS menu_name,
+         oi.quantity,
+         oi.price
+       FROM order_items oi
+       LEFT JOIN menu_items mi ON oi.menu_id = mi.id
+       WHERE oi.order_id = $1`,
+      [id]
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...orderResult.rows[0],
+        items: itemResult.rows,
+      },
+    });
+  } catch (error) {
+    console.error("Get order detail error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil detail pesanan",
+    });
+  }
+};
+
+// UPDATE ORDER STATUS
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const allowedStatus = [
+      "Pending",
+      "Processing",
+      "Completed",
+      "Cancelled",
+    ];
+
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "ID pesanan tidak valid",
+      });
+    }
+
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Status pesanan tidak valid",
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE orders
+       SET status = $1
+       WHERE id = $2
+       RETURNING *`,
+      [status, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Pesanan tidak ditemukan",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Status pesanan berhasil diperbarui",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Update order status error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Gagal memperbarui status pesanan",
+    });
+  }
+};
